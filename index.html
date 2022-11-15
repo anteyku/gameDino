@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <!-- Обязательные метатеги -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+		
+    <!-- Bootstrap CSS -->
+    <!--
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    -->
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.2/css/bootstrap.min.css" integrity="sha512-CpIKUSyh9QX2+zSdfGP+eWLx23C8Dj9/XmHjZY2uDtfkdLGo0uY12jgcnkX9vXOgYajEKb/jiw67EYm+kBf+6g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="style_1.css">
+
+    <title>Игра Dino припятствия</title>
+    <meta name="description" content="Преодолевать препятствий Dino, набираться очки и соревноваться с друзьями">
+
+    <!-- Иконки Materialize.css -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <link rel="shortcut icon" href="game-control.png" type="image/x-icon">
+
+  </head>
+  <body id="lol">
+    
+      <!--
+        <div class="container">
+          <div class="row">
+            <div class="title">2d игра на Canvas</div>
+          </div>
+        </div>  
+      -->
+
+   
+        <canvas width="1280" height="500" id="canvas"></canvas>
+        <div class="static">
+          <div class="static__speed">Очков: <span id="point">0</span> </div>
+          <div class="static__glasses">Пройдено припятствий: <span id="cactus">0</span> </div>
+        </div>
+        <div class="module">
+          <div class="module__window">
+            <div class="module__window__keyboard">Управления - Клавиша "Space" / "W" - Прижок</div>
+            <div id="rep" class="module__window__btn-start">Начать игру</div>
+            <a target="_new" href="https://anteyku.com/" class="module__window__author">Create by Anteyku</a>
+          </div>
+        </div>
+
+        <div class="adaptiveEror">Игра не поддерживается на телефонных устройствах</div>
+    
+  </body>
+</html>
+
+<script src="https://unpkg.com/vue@next"></script>
+
+<script>
+
+
+document.querySelector(`#rep`).addEventListener(`click`, ()=>{
+  start();
+  document.querySelector(`.module`).style.display = `none`;
+})
+
+
+
+
+  let canvas = document.querySelector(`#canvas`);
+  // Устанавливаю высоту и ширину canvas на весь екран
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight - 2;
+  let ctx = canvas.getContext(`2d`);
+  ctx.fillStyle = `black`;
+    ctx.fillRect(0,0, canvas.width, canvas.height);
+
+
+ // Обект динозаврика со всеми его методами
+  let Dino;
+  let gravity;
+  let keys = [];
+  // Картинка динозавррика
+  let dinoImage = new Image();
+  dinoImage.src = 'dinosaur.png';
+  // Картинка кактуса
+  let cactusImage = new Image();
+  cactusImage.src = `cactus.png`;
+  let cactusImageTWO = new Image();
+  cactusImageTWO.src = `flag.png`;
+  let cactusImageThree = new Image();
+  cactusImageThree.src = `zombie.png`;
+  let cactusImageFor = new Image();
+  cactusImageFor.src = `cave-painting.png`
+  // Картинка месяца
+  let month = new Image();
+  month.src = `moon.png`;
+  // Звезда
+  let star = new Image();
+  star.src = `star.png`;
+
+  let END = false;
+
+  // Event Listeners
+  document.addEventListener(`keydown`, function(evt){
+    // Записываем в массив keys нажатую клавишу и устанавливаем ей значения true
+    keys[evt.code] = true;
+  })
+  document.addEventListener(`keyup`, function(evt){
+    // Записанной ранее клавише в массив keys устанавливаю значения false
+    keys[evt.code] = false;
+  })
+
+
+
+
+
+  // Функция создающая динозаврика и запускающая рисовку
+  function start(){
+    // Устанавливаю значения гравитации
+    gravity = 0.5;
+    // Создаю динозаврика и засовываю его в переменную Dino
+    Dino = new DinoConst(155, 300, 50, 50, `white`)
+
+    // Запускаю функцию рисования
+    updateDino();
+  }
+
+  
+ 
+
+  function DinoConst(x,y,w,h,c){
+    this.x = x; // Кордината X
+    this.xCactus = canvas.width;
+    this.y = y; // Кордината Y
+    this.w = w; // Ширина
+    this.h = h; // Высота
+    this.c = c; // Цвет обекта
+    this.dy = 0; // Параметр иметирующий гравитацию
+    this.speedCactus = 3; // Скорость движения кактуса
+    this.grounded = false; // Определает - находиться ли динозаврик в прижке
+    this.jumpTimer = 0; // Таймер для засикания прижка динозаврика
+    this.jumpForce = 15; // Таймер с максимальной длительностю подприга динозаврика
+    this.points = 0; // Очки
+    this.cactus = 0; // Пройдено кактусов
+    this.list = [ // Массив припятствий
+        {
+          x: 0,
+          imgSrc: `fanta.png`,
+          visible: false
+        },
+        {
+          x: 0,
+          imgSrc: `kola.png`,
+          visible: false
+        },
+        {
+          x: 0,
+          imgSrc: `kola.png`,
+          visible: false
+        },
+        {
+          x: 0,
+          imgSrc: `end.png`,
+          visible: false
+        }                  
+    ]
+    this.drawDino = function(){
+      ctx.beginPath();
+      
+
+
+      ctx.fillStyle = this.c;
+      //ctx.fillRect(this.x,this.y,this.w,this.h);
+      ctx.drawImage(dinoImage, this.x,this.y,this.w,this.h);
+      ctx.closePath();     
+
+    }
+    this.animDino = function(){
+
+      // Jump 
+      if(keys[`Space`] || keys[`KeyW`]){
+        this.dinoJump();
+      } else {
+        this.jumpTimer = 0;
+      }
+
+      this.y += this.dy;  // Увеличиваем расположения динозаврика по Y (Если динозаврик стоит не на земле)
+      
+      // Если 350(Кордината-Y) + 50(Всота-Елемента) < 500(Высоты canvas)              (Тоисть - елемент выше пола)
+      if(this.y + this.h < canvas.height){
+        this.dy += gravity;
+        this.grounded = false;
+      } else {
+        this.dy = 0; 
+        this.grounded = true; 
+        this.y = canvas.height - this.h;
+      }
+
+    },
+    this.dinoJump = function(){
+      if(this.grounded && this.jumpTimer == 0){
+        this.jumpTimer = 1;
+        
+        this.dy = -this.jumpForce; // Здесь я устанавливаю -15, и тем самым устанавливаю обратную гравитацию
+        
+        /*
+          Когда мы нажимаем клавишу W - то набираем максимальную высоту пока jumpTimer < 15, после чего -
+          Когда клавиша в состоянии нажатой - jumpTimer набираем время до 15, с етим же набираеться и высота ДИНО,
+          после чего ДИНО перестает набирать высоту и срабатывает обратная гравитация.
+          Если продебажить Y кординату дино то она колебаеться то вниз то вверх при наборе высоты, все из за того - что 
+          во время набора высоты также действует и гравитация вниз, и за этого this.Y поднимаеться не только Ц
+
+        */
+      } else if(this.jumpTimer > 0 && this.jumpTimer < 1){
+        this.jumpTimer++;
+        this.dy = -this.jumpForce - (this.jumpTimer / 50);
+      }
+    },
+    this.drawCactus = function(){
+      this.obstacleGeneration()
+    },
+    this.animCactus = function(){
+
+      for(let i = 0; i < this.list.length; i++){
+        if(this.list[i].x + 40 <= 0){
+          this.list[i].visible = false;
+          this.cactus++;
+          document.querySelector(`#cactus`).innerText = this.cactus;         
+        }
+      }
+      
+    },
+    this.dinoHit = function(){
+
+      for(let elem of this.list){
+        if(elem.x > 155 && elem.x < this.x+50 && this.y + 50 > canvas.height - 40){
+          END = true;
+          document.querySelector(`.module`).style.display = `flex`;
+        }
+      }
+
+    },
+    this.pointsDino = function(){ // Обновления и добавления очков
+      this.points++;
+      document.querySelector(`#point`).innerText = this.points;
+      document.querySelector(`#cactus`).innerText = this.cactus;
+    },
+    this.obstacleGeneration = function(){ // Функция генерирующая припятствия
+ 
+      // Движения припятствий
+      function moveObstacle(list){
+        
+        
+        for(let i = 0; i < list.length; i++){
+          // Генерирую кординату самого первого припятствия
+          if(list[i].visible == false && i == 0){
+            list[i].x = (canvas.width) + (10 + Math.floor(Math.random() * 20));
+            list[i].visible = true;
+          } else if(list[i].visible == false){ // Все последующие кодинаты припятствий будут как минимум иметь 220px отступа от предыдущей
+            list[i].x = list[i-1].x + (220 + Math.floor(Math.random() * 300));
+            list[i].visible = true;
+          }
+          
+          list[i].x-=3; // Ускорения текущего припятствия 
+
+          ctx.beginPath()
+          ctx.fillStyle = `green`
+          if(i== 1){
+            ctx.drawImage(cactusImageTWO, list[i].x, canvas.height - 40, 40,40);
+          } else if(i==2){
+            ctx.drawImage(cactusImageThree, list[i].x, canvas.height - 40, 40,40);
+          } else if(i==3) {
+            ctx.drawImage(cactusImageFor, list[i].x, canvas.height - 40, 40,40);
+          } else {
+            ctx.drawImage(cactusImage, list[i].x, canvas.height - 40, 40,40);
+          }
+          ctx.closePath();
+
+
+        }
+        
+      }
+
+      moveObstacle(this.list);
+
+    }
+  }
+
+  // Покраска фона canvas в черный
+  function backgroundColor(){
+    ctx.beginPath();
+    ctx.fillStyle = `black`;
+    ctx.fillRect(0,0, canvas.width, canvas.height);
+    ctx.beginPath();
+    ctx.drawImage(month, 100,100, 100, 100);
+    ctx.beginPath();
+    ctx.drawImage(star, canvas.width - 200,300, 50, 50);
+    ctx.beginPath();
+    ctx.drawImage(star, canvas.width - 400,130, 80, 80);   
+    ctx.beginPath();
+    ctx.drawImage(star, canvas.width - 800,180, 40, 40);   
+    ctx.beginPath();
+    ctx.drawImage(star, canvas.width - 1200,120, 40, 40);   
+    ctx.closePath();
+  }
+
+  function updateDino(){
+    if(!END){
+      requestAnimationFrame(updateDino);
+      ctx.clearRect(0,0, canvas.width, canvas.height);
+      backgroundColor(); // Покраска фона в черный
+      Dino.pointsDino()
+      Dino.drawDino(); // Рисую динозаврика
+      Dino.animDino(); // Анимирую динозаврика
+      Dino.drawCactus(); // Рисую кактус
+      Dino.animCactus(); // Анимирую кактус
+      Dino.dinoHit(); // Регистрация столкновения
+    } else {
+      END = false;
+      return;
+    }
+  }
+
+
+
+
+
+
+
+/*
+
+  Vue.createApp({
+    methods: {
+
+    },
+    mounted(){
+ 
+
+
+
+      }
+    }).mount("#lol");
+    */
+
+</script>
+
+  
+
+  
+
+
+
